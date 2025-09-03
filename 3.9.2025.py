@@ -193,5 +193,6 @@ class System:
         else:
             print("Môn học không tồn tại.")
 
+# if __name__ ==
 
 system = System()
