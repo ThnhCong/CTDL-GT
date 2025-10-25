@@ -1,9 +1,8 @@
 import heapq
-import json
 from collections import Counter
 
 # -------------------------------
-# 1️⃣ Định nghĩa node cây Huffman
+# 1️⃣ Node cây Huffman
 # -------------------------------
 class Node:
     def __init__(self, char, freq):
@@ -12,13 +11,12 @@ class Node:
         self.left = None
         self.right = None
 
-    # Cho phép so sánh node trong heapq
     def __lt__(self, other):
         return self.freq < other.freq
 
 
 # -------------------------------
-# 2️⃣ Xây cây Huffman từ dữ liệu
+# 2️⃣ Xây cây Huffman
 # -------------------------------
 def build_huffman_tree(text):
     freq = Counter(text)
@@ -37,7 +35,7 @@ def build_huffman_tree(text):
 
 
 # -------------------------------
-# 3️⃣ Tạo bảng mã (ký tự → chuỗi bit)
+# 3️⃣ Sinh mã Huffman
 # -------------------------------
 def build_codes(node, current_code="", codes=None):
     if codes is None:
@@ -55,59 +53,72 @@ def build_codes(node, current_code="", codes=None):
 
 
 # -------------------------------
-# 4️⃣ Hàm nén file
+# 4️⃣ Nén file
 # -------------------------------
-def compress_file(input_file, output_bin, output_json):
-    # Đọc nội dung file
+def compress_file(input_file, output_bin, output_code_table, binary_view_file):
     with open(input_file, "r", encoding="utf-8") as f:
         text = f.read()
 
-    # Xây cây Huffman và bảng mã
+    # Xây cây và mã
     root = build_huffman_tree(text)
     codes = build_codes(root)
 
-    # Mã hóa toàn bộ nội dung
+    # Mã hóa văn bản thành chuỗi bit
     encoded_text = "".join(codes[ch] for ch in text)
 
-    # Thêm phần đệm để đủ bội 8
+    # Thêm padding cho đủ bội 8
     extra_padding = 8 - len(encoded_text) % 8
     encoded_text += "0" * extra_padding
-
-    # Ghi số lượng padding vào 8 bit đầu tiên
     padded_info = "{0:08b}".format(extra_padding)
     encoded_text = padded_info + encoded_text
 
-    # Chuyển sang byte
+    # Ghi file nhị phân
     b = bytearray()
     for i in range(0, len(encoded_text), 8):
-        byte = encoded_text[i:i + 8]
+        byte = encoded_text[i:i+8]
         b.append(int(byte, 2))
+    with open(output_bin, "wb") as f:
+        f.write(b)
 
-    # Ghi file nhị phân
-    with open(output_bin, "wb") as out:
-        out.write(bytes(b))
+    # Ghi bảng mã Huffman
+    with open(output_code_table, "w", encoding="utf-8") as f:
+        for ch, code in codes.items():
+            if ch == "\n":
+                f.write("\\n:" + code + "\n")
+            elif ch == " ":
+                f.write("space:" + code + "\n")
+            else:
+                f.write(f"{ch}:{code}\n")
 
-    # Ghi bảng mã (cấu trúc cây Huffman)
-    with open(output_json, "w", encoding="utf-8") as f:
-        json.dump(codes, f, ensure_ascii=False, indent=4)
+    # Ghi chuỗi nhị phân ra file text để xem
+    with open(binary_view_file, "w", encoding="utf-8") as f:
+        f.write(encoded_text)
 
-    print("✅ Đã nén xong!")
-    print(f"--> File nén: {output_bin}")
-    print(f"--> Cây Huffman: {output_json}")
+    print("✅ Đã nén thành công!")
+    print(f"--> File nhị phân: {output_bin}")
+    print(f"--> Bảng mã: {output_code_table}")
+    print(f"--> Mã nhị phân xem được: {binary_view_file}")
 
 
 # -------------------------------
-# 5️⃣ Hàm giải nén file
+# 5️⃣ Giải nén file
 # -------------------------------
-def decompress_file(input_bin, input_json, output_file):
-    # Đọc bảng mã Huffman
-    with open(input_json, "r", encoding="utf-8") as f:
-        codes = json.load(f)
+def decompress_file(input_bin, input_code_table, output_text):
+    # Đọc bảng mã
+    codes = {}
+    with open(input_code_table, "r", encoding="utf-8") as f:
+        for line in f:
+            if ":" not in line:
+                continue
+            ch, code = line.strip().split(":", 1)
+            if ch == "\\n":
+                codes[code] = "\n"
+            elif ch == "space":
+                codes[code] = " "
+            else:
+                codes[code] = ch
 
-    # Đảo bảng mã (bit → ký tự)
-    reversed_codes = {v: k for k, v in codes.items()}
-
-    # Đọc dữ liệu nén
+    # Đọc file nhị phân
     with open(input_bin, "rb") as f:
         bit_string = ""
         byte = f.read(1)
@@ -117,7 +128,7 @@ def decompress_file(input_bin, input_json, output_file):
             bit_string += bits
             byte = f.read(1)
 
-    # Gỡ padding
+    # Bỏ padding
     padding = int(bit_string[:8], 2)
     bit_string = bit_string[8:-padding]
 
@@ -126,21 +137,20 @@ def decompress_file(input_bin, input_json, output_file):
     decoded_text = ""
     for bit in bit_string:
         current_code += bit
-        if current_code in reversed_codes:
-            decoded_text += reversed_codes[current_code]
+        if current_code in codes:
+            decoded_text += codes[current_code]
             current_code = ""
 
-    # Ghi ra file văn bản
-    with open(output_file, "w", encoding="utf-8") as out:
-        out.write(decoded_text)
+    with open(output_text, "w", encoding="utf-8") as f:
+        f.write(decoded_text)
 
     print("✅ Giải nén thành công!")
-    print(f"--> File kết quả: {output_file}")
+    print(f"--> File văn bản: {output_text}")
 
 
 # -------------------------------
-# 6️⃣ Ví dụ chạy thử
+# 6️⃣ Chạy thử
 # -------------------------------
 if __name__ == "__main__":
-    compress_file("input.txt", "compressed.bin", "huffman_tree.json")
-    decompress_file("compressed.bin", "huffman_tree.json", "output.txt")
+    compress_file("input.txt", "compressed.bin", "code_table.txt", "binary_view.txt")
+    decompress_file("compressed.bin", "code_table.txt", "output.txt")
