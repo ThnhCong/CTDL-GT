@@ -1,9 +1,6 @@
 import heapq
 from collections import Counter
 
-# -------------------------------
-# 1️⃣ Node cây Huffman
-# -------------------------------
 class Node:
     def __init__(self, char, freq):
         self.char = char
@@ -14,10 +11,6 @@ class Node:
     def __lt__(self, other):
         return self.freq < other.freq
 
-
-# -------------------------------
-# 2️⃣ Xây cây Huffman
-# -------------------------------
 def build_huffman_tree(text):
     freq = Counter(text)
     heap = [Node(ch, f) for ch, f in freq.items()]
@@ -33,10 +26,6 @@ def build_huffman_tree(text):
 
     return heap[0]
 
-
-# -------------------------------
-# 3️⃣ Sinh mã Huffman
-# -------------------------------
 def build_codes(node, current_code="", codes=None):
     if codes is None:
         codes = {}
@@ -52,9 +41,6 @@ def build_codes(node, current_code="", codes=None):
     return codes
 
 
-# -------------------------------
-# 4️⃣ Nén file
-# -------------------------------
 def compress_file(input_file, output_bin, output_code_table, binary_view_file):
     with open(input_file, "r", encoding="utf-8") as f:
         text = f.read()
@@ -94,7 +80,7 @@ def compress_file(input_file, output_bin, output_code_table, binary_view_file):
     with open(binary_view_file, "w", encoding="utf-8") as f:
         f.write(encoded_text)
 
-    print("✅ Đã nén thành công!")
+    print(" Đã nén thành công!")
     print(f"--> File nhị phân: {output_bin}")
     print(f"--> Bảng mã: {output_code_table}")
     print(f"--> Mã nhị phân xem được: {binary_view_file}")
@@ -144,13 +130,10 @@ def decompress_file(input_bin, input_code_table, output_text):
     with open(output_text, "w", encoding="utf-8") as f:
         f.write(decoded_text)
 
-    print("✅ Giải nén thành công!")
+    print(" Giải nén thành công!")
     print(f"--> File văn bản: {output_text}")
 
 
-# -------------------------------
-# 6️⃣ Chạy thử
-# -------------------------------
 if __name__ == "__main__":
     compress_file("input.txt", "compressed.bin", "code_table.txt", "binary_view.txt")
     decompress_file("compressed.bin", "code_table.txt", "output.txt")
